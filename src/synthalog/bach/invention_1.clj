@@ -15,17 +15,33 @@
 (defn shift-phrase [p shift]
   (map #(shift-pitch % shift) p))
 
+(defn terminate-trill [m] (-> (last m)
+                              (update :duration / 1/4)))
+
+(defn trill [note length]
+  (cons note
+        (for [x    (range 1 (+ 1 length))
+              :let [start-note  (:pitch note)
+                    arp-beat   (* (:duration note) 1/4)
+                    time-beat  (:time note)
+                    pitch      (if (odd? x) start-note (- start-note 1))
+                    time (if (= x 1) (+ time-beat (:duration note)) (+ time-beat (* x arp-beat)))]]
+          {:pitch pitch :time time :duration arp-beat})))
+
+(comment
+  (terminate-trill (trill (first a) 4)))
+
 (def a
-  (phrase (repeat 1)
+  (phrase (repeat 1/4)
           (into [] (range 0 4))))
 
 (def b
-  (phrase (repeat 1)
+  (phrase (repeat 1/4)
           [2 1 0 4]))
 
 (def c
-  (phrase (repeat 1)
-          [7 nil 6 nil 7 nil 8 nil]))
+  (phrase (repeat 1/4)
+          [7 6 7 8]))
 
 (def s (then b a))
 
@@ -43,10 +59,16 @@
 (comment
   (->> s
        #_(then c)
-       #_(then (with c (->> s (all :part :bass))))
-       #_(then (shift-phrase s 4))
-       #_(then (shift-phrase c 4))
-       (tempo (bpm 120))
+       (then (with c (->> s (all :part :bass))))
+       (then (shift-phrase s 4))
+       (then (shift-phrase c 4))
+       (tempo (bpm 84))
+       (where :pitch (comp scale/C scale/major))
+       live/play)
+
+  (->> (phrase [1/4 1/4 1/4 1/4 1/16 1/16 1/16  1/16  1/4]
+               [0 2 1 3 3 2 3 2 2 ])
+       (tempo (bpm 84))
        (where :pitch (comp scale/C scale/major))
        live/play)
 
